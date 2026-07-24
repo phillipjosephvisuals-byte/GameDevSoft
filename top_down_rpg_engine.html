@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AETHER - Top-Down RPG Game Engine</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    .canvas-grid {
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden select-none bg-slate-950 text-slate-100">
+
+  <!-- Header Bar -->
+  <header class="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <i class="fa-solid font-bold text-white fa-gamepad text-base"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-slate-100 text-sm tracking-wide flex items-center gap-2">
+          AETHER <span class="text-xs font-normal text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/50">RPG Engine v2.0</span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Quick Action Controls -->
+    <div class="flex items-center space-x-2">
+      <button id="btn-playtest" onclick="engine.launchPlaytestTab()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-2 transition shadow-md shadow-emerald-900/30">
+        <i class="fa-solid fa-up-right-from-square"></i> Playtest in New Tab
+      </button>
+      <div class="h-4 w-[1px] bg-slate-800 mx-1"></div>
+      <button onclick="engine.saveProjectLocal()" title="Save to Browser" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 border border-slate-700 transition">
+        <i class="fa-solid fa-floppy-disk text-indigo-400"></i> Save
+      </button>
+      <button onclick="engine.exportProjectJSON()" title="Export JSON File" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 border border-slate-700 transition">
+        <i class="fa-solid fa-download text-indigo-400"></i> Export
+      </button>
+      <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 border border-slate-700 transition cursor-pointer">
+        <i class="fa-solid fa-upload text-indigo-400"></i> Import
+        <input type="file" id="import-json-input" onchange="engine.importProjectJSON(event)" class="hidden" accept=".json">
+      </label>
+      <button onclick="ui.toggleAIModal(true)" class="bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-robot text-purple-400"></i> BYO-AI Engine
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Studio Workspace -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- Left Panel: Palette & Screen Customizer -->
+    <aside class="w-80 border-r border-slate-800 bg-slate-900/50 flex flex-col z-10">
+      <!-- Left Panel Tabs -->
+      <div class="flex border-b border-slate-800 bg-slate-900 text-xs font-medium">
+        <button id="tab-palette" onclick="ui.switchLeftTab('palette')" class="flex-1 py-2.5 text-center text-indigo-400 border-b-2 border-indigo-500 bg-slate-800/40 font-semibold">
+          <i class="fa-solid fa-boxes-stacked mr-1"></i> Asset Palette
+        </button>
+        <button id="tab-screens" onclick="ui.switchLeftTab('screens')" class="flex-1 py-2.5 text-center text-slate-400 hover:text-slate-200 border-b-2 border-transparent">
+          <i class="fa-solid fa-desktop mr-1"></i> UI & Screens
+        </button>
+        <button id="tab-rules" onclick="ui.switchLeftTab('rules')" class="flex-1 py-2.5 text-center text-slate-400 hover:text-slate-200 border-b-2 border-transparent">
+          <i class="fa-solid fa-sliders mr-1"></i> Player Stats
+        </button>
+      </div>
+
+      <!-- Palette Content -->
+      <div id="content-palette" class="p-3 flex-1 overflow-y-auto space-y-4">
+        <div>
+          <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase block mb-2">Available Entity Templates</span>
+          <p class="text-xs text-slate-500 mb-3">Click or Drag items onto the visual canvas to spawn them in your level.</p>
+          
+          <div class="grid grid-cols-2 gap-2">
+            <!-- Player Template -->
+            <div onclick="engine.spawnEntity('PLAYER')" draggable="true" ondragstart="engine.handleDragStart(event, 'PLAYER')" class="p-2.5 rounded-lg border border-slate-800 bg-slate-800/50 hover:bg-slate-800 hover:border-indigo-500/50 cursor-pointer transition flex items-center space-x-2.5 group">
+              <div class="w-7 h-7 rounded bg-blue-600 flex items-center justify-center font-bold text-white text-xs shadow">P</div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200 group-hover:text-indigo-300">PLAYER</div>
+                <div class="text-[10px] text-slate-400">Hero Character</div>
+              </div>
+            </div>
+
+            <!-- NPC Template -->
+            <div onclick="engine.spawnEntity('NPC')" draggable="true" ondragstart="engine.handleDragStart(event, 'NPC')" class="p-2.5 rounded-lg border border-slate-800 bg-slate-800/50 hover:bg-slate-800 hover:border-emerald-500/50 cursor-pointer transition flex items-center space-x-2.5 group">
+              <div class="w-7 h-7 rounded bg-emerald-600 flex items-center justify-center font-bold text-white text-xs shadow">NPC</div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200 group-hover:text-emerald-300">NPC</div>
+                <div class="text-[10px] text-slate-400">Townfolk / Quest</div>
+              </div>
+            </div>
+
+            <!-- Enemy Template -->
+            <div onclick="engine.spawnEntity('ENEMY')" draggable="true" ondragstart="engine.handleDragStart(event, 'ENEMY')" class="p-2.5 rounded-lg border border-slate-800 bg-slate-800/50 hover:bg-slate-800 hover:border-rose-500/50 cursor-pointer transition flex items-center space-x-2.5 group">
+              <div class="w-7 h-7 rounded bg-rose-600 flex items-center justify-center font-bold text-white text-xs shadow">ENM</div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200 group-hover:text-rose-300">ENEMY</div>
+                <div class="text-[10px] text-slate-400">Hostile Monster</div>
+              </div>
+            </div>
+
+            <!-- Item Template -->
+            <div onclick="engine.spawnEntity('ITEM')" draggable="true" ondragstart="engine.handleDragStart(event, 'ITEM')" class="p-2.5 rounded-lg border border-slate-800 bg-slate-800/50 hover:bg-slate-800 hover:border-amber-500/50 cursor-pointer transition flex items-center space-x-2.5 group">
+              <div class="w-7 h-7 rounded bg-amber-500 flex items-center justify-center font-bold text-slate-900 text-xs shadow"><i class="fa-solid fa-coins"></i></div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200 group-hover:text-amber-300">ITEM</div>
+                <div class="text-[10px] text-slate-400">Loot / Potion</div>
+              </div>
+            </div>
+
+            <!-- Prop Template -->
+            <div onclick="engine.spawnEntity('PROP')" draggable="true" ondragstart="engine.handleDragStart(event, 'PROP')" class="p-2.5 rounded-lg border border-slate-800 bg-slate-800/50 hover:bg-slate-800 hover:border-orange-500/50 cursor-pointer transition flex items-center space-x-2.5 group">
+              <div class="w-7 h-7 rounded bg-orange-700 flex items-center justify-center font-bold text-white text-xs shadow"><i class="fa-solid fa-box"></i></div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200 group-hover:text-orange-300">PROP</div>
+                <div class="text-[10px] text-slate-400">Obstacle / Chest</div>
+              </div>
+            </div>
+
+            <!-- Landscape Template -->
+            <div onclick="engine.spawnEntity('LANDSCAPE')" draggable="true" ondragstart="engine.handleDragStart(event, 'LANDSCAPE')" class="p-2.5 rounded-lg border border-slate-800 bg-slate-800/50 hover:bg-slate-800 hover:border-green-500/50 cursor-pointer transition flex items-center space-x-2.5 group">
+              <div class="w-7 h-7 rounded bg-emerald-800 flex items-center justify-center font-bold text-white text-xs shadow"><i class="fa-solid fa-tree"></i></div>
+              <div>
+                <div class="text-xs font-semibold text-slate-200 group-hover:text-emerald-300">LANDSCAPE</div>
+                <div class="text-[10px] text-slate-400">Environment Tile</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-800 pt-3">
+          <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase block mb-2">Hierarchy / Entities List</span>
+          <div id="entity-hierarchy-list" class="space-y-1 max-h-60 overflow-y-auto pr-1">
+            <!-- Dynamic Entity List Items -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Screens & UI Content -->
+      <div id="content-screens" class="p-3 flex-1 overflow-y-auto space-y-4 hidden">
+        <div>
+          <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase block mb-2">Game Screens Setup</span>
+          <p class="text-xs text-slate-500 mb-3">Configure game titles, menus, and end states for the runtime engine.</p>
+          
+          <div class="space-y-3 text-xs">
+            <!-- Main Menu Settings -->
+            <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-800 space-y-2">
+              <div class="font-bold text-indigo-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-bars-staggered"></i> Main Menu Screen
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Game Title</label>
+                <input type="text" id="cfg-game-title" value="Chronicles of Aether" onchange="engine.project.screens.mainMenu.title = this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Subtitle / Tagline</label>
+                <input type="text" id="cfg-game-subtitle" value="Press Start to Begin Your Journey" onchange="engine.project.screens.mainMenu.subtitle = this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+              <div class="flex items-center space-x-2 pt-1">
+                <input type="checkbox" id="cfg-menu-options" checked onchange="engine.project.screens.mainMenu.showOptions = this.checked" class="rounded border-slate-700 text-indigo-600 focus:ring-0">
+                <label for="cfg-menu-options" class="text-slate-300">Include Options Button</label>
+              </div>
+            </div>
+
+            <!-- Pause Modal Settings -->
+            <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-800 space-y-2">
+              <div class="font-bold text-amber-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-pause"></i> Pause & Save Screens
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Pause Banner Text</label>
+                <input type="text" id="cfg-pause-title" value="- GAME PAUSED -" onchange="engine.project.screens.pause.title = this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Default Save Slot Name</label>
+                <input type="text" id="cfg-save-name" value="Slot 1 - Hero Save" onchange="engine.project.screens.save.slotName = this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+            </div>
+
+            <!-- Victory / Defeat State Settings -->
+            <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-800 space-y-2">
+              <div class="font-bold text-rose-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-skull"></i> Game Over & Victory
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Game Over Message</label>
+                <input type="text" id="cfg-gameover-msg" value="You have fallen in battle..." onchange="engine.project.screens.gameOver.message = this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Game Complete Victory Message</label>
+                <input type="text" id="cfg-victory-msg" value="Victory! You completed the quest!" onchange="engine.project.screens.gameComplete.message = this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player Rules & Leveling Content -->
+      <div id="content-rules" class="p-3 flex-1 overflow-y-auto space-y-4 hidden">
+        <div>
+          <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase block mb-2">Hero Stats & Progression</span>
+          <p class="text-xs text-slate-500 mb-3">Adjust base stats, XP thresholds, and custom level-up perk choices.</p>
+          
+          <div class="space-y-3 text-xs">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] text-slate-400">Max Health (HP)</label>
+                <input type="number" id="player-stat-hp" value="100" onchange="engine.project.playerRules.maxHp = +this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Attack Damage</label>
+                <input type="number" id="player-stat-damage" value="15" onchange="engine.project.playerRules.damage = +this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">XP Needed for Level Up</label>
+                <input type="number" id="player-stat-xp" value="100" onchange="engine.project.playerRules.xpPerLevel = +this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Initial Coins</label>
+                <input type="number" id="player-stat-coins" value="0" onchange="engine.project.playerRules.initialCoins = +this.value" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+            </div>
+
+            <!-- Level Up Options Builder -->
+            <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-800 space-y-2">
+              <div class="font-bold text-indigo-300 text-xs flex items-center justify-between">
+                <span>Level-Up Perk Choices</span>
+                <button onclick="engine.promptAddLevelUpOption()" class="text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 rounded">+ Add Perk</button>
+              </div>
+              <p class="text-[10px] text-slate-400">Options presented to player when leveling up:</p>
+              <div id="levelup-options-list" class="space-y-1.5">
+                <!-- Dynamic Level Up Perk Options -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center: Visual Editor Viewport -->
+    <main class="flex-1 bg-slate-950 flex flex-col relative overflow-hidden">
+      <!-- Editor Viewport Toolbar -->
+      <div class="h-10 border-b border-slate-800 bg-slate-900/40 px-4 flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-4 text-slate-400">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-vector-square text-indigo-400"></i> Canvas: 20x15 Tiles</span>
+          <span id="viewport-cursor-coords" class="text-slate-500 font-mono">X: 0, Y: 0</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="engine.toggleGrid()" id="btn-toggle-grid" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1">
+            <i class="fa-solid fa-border-all"></i> Toggle Grid
+          </button>
+          <button onclick="ui.confirmAction('Clear canvas level?', () => engine.clearCanvas())" class="px-2.5 py-1 rounded bg-rose-950/60 border border-rose-800/50 text-rose-300 hover:bg-rose-900/60 transition flex items-center gap-1">
+            <i class="fa-solid fa-trash-can"></i> Clear All
+          </button>
+        </div>
+      </div>
+
+      <!-- Interactive Canvas Container -->
+      <div class="flex-1 flex items-center justify-center p-4 overflow-auto relative canvas-grid" id="canvas-container" ondragover="event.preventDefault()" ondrop="engine.handleCanvasDrop(event)">
+        <canvas id="viewport-canvas" width="800" height="600" class="border border-slate-800 rounded-lg shadow-2xl bg-slate-900/80 cursor-crosshair"></canvas>
+      </div>
+    </main>
+
+    <!-- Right Panel: Inspector Panel -->
+    <aside class="w-80 border-l border-slate-800 bg-slate-900/50 flex flex-col z-10">
+      <div class="h-10 border-b border-slate-800 bg-slate-900 px-3 flex items-center justify-between font-semibold text-xs text-slate-300">
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-sliders text-indigo-400"></i> Entity Inspector</span>
+        <span id="selected-entity-badge" class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">None Selected</span>
+      </div>
+
+      <div id="inspector-content" class="p-3 flex-1 overflow-y-auto space-y-4 text-xs">
+        <div class="text-center py-12 text-slate-500 space-y-2">
+          <i class="fa-solid fa-mouse-pointer text-2xl text-slate-700"></i>
+          <p>Click an entity on the canvas to inspect and edit its properties.</p>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="modal-confirm" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-sm p-5 shadow-2xl space-y-4">
+      <h3 id="confirm-modal-title" class="font-bold text-slate-100 text-sm">Are you sure?</h3>
+      <p id="confirm-modal-msg" class="text-xs text-slate-400">This action cannot be undone.</p>
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="ui.resolveConfirm(false)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded">Cancel</button>
+        <button onclick="ui.resolveConfirm(true)" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-3 py-1.5 rounded">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BYO-AI Config & Generator Modal -->
+  <div id="modal-ai" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-robot text-purple-400"></i> Bring Your Own AI (BYO-AI) Engine
+        </h3>
+        <button onclick="ui.toggleAIModal(false)" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-[10px] text-slate-400">AI Provider / Endpoint</label>
+          <select id="ai-provider" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-100 mt-1">
+            <option value="gemini">Google Gemini API (Built-in / Custom Key)</option>
+            <option value="openai">OpenAI (GPT-4o / Compatible)</option>
+            <option value="anthropic">Anthropic Claude API</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-slate-400">API Key (Stored locally in your browser)</label>
+          <input type="password" id="ai-api-key" placeholder="Enter API Key or leave empty for Canvas runtime default" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-100 mt-1 font-mono text-[11px]">
+        </div>
+
+        <div class="border-t border-slate-800 pt-3">
+          <span class="font-semibold text-purple-300 block mb-1">AI Creator Generator Assistant</span>
+          <p class="text-slate-400 text-[11px] mb-2">Prompt AI to construct custom dialogue text or base-64 SVG sprite assets for your selected entity.</p>
+          
+          <label class="text-[10px] text-slate-400">Prompt AI</label>
+          <textarea id="ai-generator-prompt" rows="2" placeholder="e.g. Generate a dark mysterious dialogue for a goblin king" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-slate-100 mt-1"></textarea>
+          
+          <div class="flex gap-2 pt-2">
+            <button onclick="engine.generateAIDialogue()" class="flex-1 bg-purple-700 hover:bg-purple-600 text-white font-semibold py-1.5 rounded transition">
+              <i class="fa-solid fa-comment-dots mr-1"></i> Generate Dialogue
+            </button>
+            <button onclick="engine.generateAISprite()" class="flex-1 bg-indigo-700 hover:bg-indigo-600 text-white font-semibold py-1.5 rounded transition">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate Sprite SVG
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end border-t border-slate-800 pt-3">
+        <button onclick="ui.toggleAIModal(false)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-1.5 rounded">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <script>
+    /* Top-Down RPG Engine State & Visual Studio Logic */
+    class RPGEngine {
+      constructor() {
+        this.canvas = document.getElementById('viewport-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.gridSize = 40; // 20x15 tiles on 800x600 canvas
+        this.showGrid = true;
+        this.selectedEntityId = null;
+
+        // Default Project Data State
+        this.project = {
+          version: '2.0',
+          title: 'Chronicles of Aether',
+          playerRules: {
+            maxHp: 100,
+            damage: 15,
+            xpPerLevel: 100,
+            initialCoins: 0,
+            levelUpOptions: [
+              { name: 'Vitality Boost', effect: '+20 Max HP', hpBonus: 20, damageBonus: 0 },
+              { name: 'Sharpened Sword', effect: '+5 Attack Damage', hpBonus: 0, damageBonus: 5 },
+              { name: 'Full Healing Potion', effect: 'Restores All HP', hpBonus: 0, damageBonus: 0, heal: true }
+            ]
+          },
+          screens: {
+            mainMenu: { title: 'Chronicles of Aether', subtitle: 'Press Start to Begin Your Journey', showOptions: true },
+            pause: { title: '- GAME PAUSED -' },
+            save: { slotName: 'Slot 1 - Hero Save' },
+            gameOver: { message: 'You have fallen in battle...' },
+            gameComplete: { message: 'Victory! You completed the quest!' }
+          },
+          entities: []
+        };
+
+        this.initDefaultScene();
+        this.setupEventListeners();
+        this.renderHierarchy();
+        this.draw();
+      }
+
+      initDefaultScene() {
+        // Default Player
+        this.project.entities.push({
+          id: 'player_1',
+          name: 'Hero Player',
+          classType: 'PLAYER',
+          x: 4,
+          y: 7,
+          scale: 1,
+          color: '#3b82f6',
+          customSvg: '',
+          customImage: ''
+        });
+
+        // Default Guard NPC
+        this.project.entities.push({
+          id: 'npc_1',
+          name: 'Guard Captain',
+          classType: 'NPC',
+          x: 10,
+          y: 4,
+          scale: 1,
+          color: '#10b981',
+          viewDistance: { north: 3, south: 2, east: 4, west: 2 },
+          moveType: 'TARGET_PLAYER',
+          targetX: 10,
+          targetY: 4,
+          dialogueText: 'Halt, Traveler! Beware of wild goblins in the eastern woods.',
+          customSvg: '',
+          customImage: ''
+        });
+
+        // Default Enemy
+        this.project.entities.push({
+          id: 'enemy_1',
+          name: 'Forest Goblin',
+          classType: 'ENEMY',
+          x: 15,
+          y: 11,
+          scale: 1,
+          color: '#e11d48',
+          hp: 40,
+          damage: 12,
+          viewDistance: { north: 4, south: 4, east: 4, west: 4 },
+          moveType: 'TARGET_PLAYER',
+          targetX: 15,
+          targetY: 11,
+          dialogueText: 'Grrr! Intruders shall not pass!',
+          customSvg: '',
+          customImage: ''
+        });
+
+        // Default Items
+        this.project.entities.push({
+          id: 'item_1',
+          name: 'Gold Coin Chest',
+          classType: 'ITEM',
+          x: 17,
+          y: 3,
+          scale: 0.9,
+          color: '#f59e0b',
+          itemType: 'COINS',
+          itemValue: 50,
+          customSvg: '',
+          customImage: ''
+        });
+
+        this.project.entities.push({
+          id: 'item_2',
+          name: 'Health Elixir',
+          classType: 'ITEM',
+          x: 8,
+          y: 12,
+          scale: 0.8,
+          color: '#ec4899',
+          itemType: 'HEALTH',
+          itemValue: 35,
+          customSvg: '',
+          customImage: ''
+        });
+
+        // Props & Landscape
+        this.project.entities.push({
+          id: 'prop_1',
+          name: 'Stone Wall Block',
+          classType: 'PROP',
+          x: 10,
+          y: 7,
+          scale: 1,
+          color: '#c2410c',
+          isSolid: true,
+          customSvg: '',
+          customImage: ''
+        });
+
+        this.project.entities.push({
+          id: 'land_1',
+          name: 'Enchanted Bush',
+          classType: 'LANDSCAPE',
+          x: 14,
+          y: 6,
+          scale: 1.1,
+          color: '#065f46',
+          isSolid: false,
+          customSvg: '',
+          customImage: ''
+        });
+
+        this.selectedEntityId = 'player_1';
+      }
+
+      setupEventListeners() {
+        let isDragging = false;
+        let dragEntity = null;
+
+        this.canvas.addEventListener('mousedown', (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const clickY = e.clientY - rect.top;
+          
+          const tileX = Math.floor(clickX / this.gridSize);
+          const tileY = Math.floor(clickY / this.gridSize);
+
+          const found = this.project.entities.find(ent => Math.floor(ent.x) === tileX && Math.floor(ent.y) === tileY);
+          if (found) {
+            this.selectedEntityId = found.id;
+            isDragging = true;
+            dragEntity = found;
+          } else {
+            this.selectedEntityId = null;
+          }
+          this.renderHierarchy();
+          this.renderInspector();
+          this.draw();
+        });
+
+        this.canvas.addEventListener('mousemove', (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const clickY = e.clientY - rect.top;
+          const tileX = Math.floor(clickX / this.gridSize);
+          const tileY = Math.floor(clickY / this.gridSize);
+
+          document.getElementById('viewport-cursor-coords').innerText = `X: ${tileX}, Y: ${tileY}`;
+
+          if (isDragging && dragEntity) {
+            dragEntity.x = Math.max(0, Math.min(19, tileX));
+            dragEntity.y = Math.max(0, Math.min(14, tileY));
+            this.draw();
+            this.renderInspector();
+          }
+        });
+
+        window.addEventListener('mouseup', () => {
+          isDragging = false;
+          dragEntity = null;
+        });
+      }
+
+      draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Grid overlay
+        if (this.showGrid) {
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+          this.ctx.lineWidth = 1;
+          for (let x = 0; x <= this.canvas.width; x += this.gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.canvas.height);
+            this.ctx.stroke();
+          }
+          for (let y = 0; y <= this.canvas.height; y += this.gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width, y);
+            this.ctx.stroke();
+          }
+        }
+
+        // Render Entities
+        this.project.entities.forEach(ent => {
+          const px = ent.x * this.gridSize;
+          const py = ent.y * this.gridSize;
+          const scale = ent.scale || 1;
+          const size = this.gridSize * scale;
+          const offset = (this.gridSize - size) / 2;
+
+          // Draw 4-Directional Vision Cone for Selected NPC / ENEMY
+          if (ent.id === this.selectedEntityId && (ent.classType === 'NPC' || ent.classType === 'ENEMY') && ent.viewDistance) {
+            this.drawVisionCones(ent);
+          }
+
+          // Entity Body Rendering
+          this.ctx.save();
+          if (ent.customImage) {
+            const img = new Image();
+            img.src = ent.customImage;
+            this.ctx.drawImage(img, px + offset, py + offset, size, size);
+          } else {
+            // Default Styled Square Box with Rounded Corners
+            this.ctx.fillStyle = ent.color || '#3b82f6';
+            this.ctx.beginPath();
+            this.ctx.roundRect(px + offset, py + offset, size, size, 6 * scale);
+            this.ctx.fill();
+
+            // Label Badge
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = 'bold 11px sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            let label = ent.classType.substring(0, 3);
+            if (ent.classType === 'PLAYER') label = 'P';
+            this.ctx.fillText(label, px + this.gridSize / 2, py + this.gridSize / 2);
+          }
+
+          // Selection Box Highlight
+          if (ent.id === this.selectedEntityId) {
+            this.ctx.strokeStyle = '#6366f1';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(px + offset - 2, py + offset - 2, size + 4, size + 4);
+          }
+
+          this.ctx.restore();
+        });
+      }
+
+      drawVisionCones(ent) {
+        const cx = (ent.x + 0.5) * this.gridSize;
+        const cy = (ent.y + 0.5) * this.gridSize;
+        const vd = ent.viewDistance;
+
+        this.ctx.save();
+        this.ctx.fillStyle = ent.classType === 'ENEMY' ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+        this.ctx.strokeStyle = ent.classType === 'ENEMY' ? 'rgba(244, 63, 94, 0.5)' : 'rgba(16, 185, 129, 0.5)';
+        this.ctx.lineWidth = 1.5;
+
+        // North Cone
+        if (vd.north > 0) {
+          const dist = vd.north * this.gridSize;
+          this.ctx.beginPath();
+          this.ctx.moveTo(cx, cy);
+          this.ctx.lineTo(cx - dist * 0.6, cy - dist);
+          this.ctx.lineTo(cx + dist * 0.6, cy - dist);
+          this.ctx.closePath();
+          this.ctx.fill();
+          this.ctx.stroke();
+        }
+
+        // South Cone
+        if (vd.south > 0) {
+          const dist = vd.south * this.gridSize;
+          this.ctx.beginPath();
+          this.ctx.moveTo(cx, cy);
+          this.ctx.lineTo(cx - dist * 0.6, cy + dist);
+          this.ctx.lineTo(cx + dist * 0.6, cy + dist);
+          this.ctx.closePath();
+          this.ctx.fill();
+          this.ctx.stroke();
+        }
+
+        // East Cone
+        if (vd.east > 0) {
+          const dist = vd.east * this.gridSize;
+          this.ctx.beginPath();
+          this.ctx.moveTo(cx, cy);
+          this.ctx.lineTo(cx + dist, cy - dist * 0.6);
+          this.ctx.lineTo(cx + dist, cy + dist * 0.6);
+          this.ctx.closePath();
+          this.ctx.fill();
+          this.ctx.stroke();
+        }
+
+        // West Cone
+        if (vd.west > 0) {
+          const dist = vd.west * this.gridSize;
+          this.ctx.beginPath();
+          this.ctx.moveTo(cx, cy);
+          this.ctx.lineTo(cx - dist, cy - dist * 0.6);
+          this.ctx.lineTo(cx - dist, cy + dist * 0.6);
+          this.ctx.closePath();
+          this.ctx.fill();
+          this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+      }
+
+      spawnEntity(classType) {
+        const id = classType.toLowerCase() + '_' + Date.now();
+        const colors = {
+          PLAYER: '#3b82f6',
+          NPC: '#10b981',
+          ENEMY: '#e11d48',
+          ITEM: '#f59e0b',
+          PROP: '#c2410c',
+          LANDSCAPE: '#065f46'
+        };
+
+        const newEnt = {
+          id,
+          name: `New ${classType}`,
+          classType,
+          x: 10,
+          y: 7,
+          scale: 1,
+          color: colors[classType] || '#3b82f6',
+          customSvg: '',
+          customImage: ''
+        };
+
+        if (classType === 'NPC' || classType === 'ENEMY') {
+          newEnt.viewDistance = { north: 3, south: 3, east: 3, west: 3 };
+          newEnt.moveType = 'TARGET_PLAYER';
+          newEnt.targetX = 10;
+          newEnt.targetY = 7;
+          newEnt.dialogueText = classType === 'NPC' ? 'Hello traveler!' : 'Prepare to battle!';
+          if (classType === 'ENEMY') {
+            newEnt.hp = 30;
+            newEnt.damage = 10;
+          }
+        } else if (classType === 'ITEM') {
+          newEnt.itemType = 'COINS';
+          newEnt.itemValue = 25;
+        } else if (classType === 'PROP') {
+          newEnt.isSolid = true;
+        }
+
+        this.project.entities.push(newEnt);
+        this.selectedEntityId = id;
+        this.renderHierarchy();
+        this.renderInspector();
+        this.draw();
+      }
+
+      handleDragStart(e, classType) {
+        e.dataTransfer.setData('text/plain', classType);
+      }
+
+      handleCanvasDrop(e) {
+        e.preventDefault();
+        const classType = e.dataTransfer.getData('text/plain');
+        if (!classType) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const dropX = e.clientX - rect.left;
+        const dropY = e.clientY - rect.top;
+        const tileX = Math.floor(dropX / this.gridSize);
+        const tileY = Math.floor(dropY / this.gridSize);
+
+        this.spawnEntity(classType);
+        const lastEnt = this.project.entities[this.project.entities.length - 1];
+        lastEnt.x = Math.max(0, Math.min(19, tileX));
+        lastEnt.y = Math.max(0, Math.min(14, tileY));
+        this.draw();
+        this.renderInspector();
+      }
+
+      toggleGrid() {
+        this.showGrid = !this.showGrid;
+        this.draw();
+      }
+
+      clearCanvas() {
+        this.project.entities = [];
+        this.selectedEntityId = null;
+        this.renderHierarchy();
+        this.renderInspector();
+        this.draw();
+        ui.showToast('Canvas cleared successfully', 'info');
+      }
+
+      renderInspector() {
+        const container = document.getElementById('inspector-content');
+        const badge = document.getElementById('selected-entity-badge');
+        
+        const ent = this.project.entities.find(e => e.id === this.selectedEntityId);
+        if (!ent) {
+          badge.innerText = 'None Selected';
+          container.innerHTML = `
+            <div class="text-center py-12 text-slate-500 space-y-2">
+              <i class="fa-solid fa-mouse-pointer text-2xl text-slate-700"></i>
+              <p>Click an entity on the canvas to inspect and edit its properties.</p>
+            </div>`;
+          return;
+        }
+
+        badge.innerText = `${ent.classType}: ${ent.name}`;
+
+        let html = `
+          <div class="space-y-3">
+            <div>
+              <label class="text-[10px] text-slate-400">Entity Name</label>
+              <input type="text" value="${ent.name}" onchange="engine.updateSelectedEntity('name', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] text-slate-400">Position X (Tiles)</label>
+                <input type="number" value="${ent.x}" min="0" max="19" onchange="engine.updateSelectedEntity('x', +this.value)" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Position Y (Tiles)</label>
+                <input type="number" value="${ent.y}" min="0" max="14" onchange="engine.updateSelectedEntity('y', +this.value)" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] text-slate-400">Scale Size (${ent.scale}x)</label>
+                <input type="range" min="0.5" max="3" step="0.1" value="${ent.scale}" oninput="engine.updateSelectedEntity('scale', +this.value)" class="w-full mt-1">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Square Base Color</label>
+                <input type="color" value="${ent.color}" onchange="engine.updateSelectedEntity('color', this.value)" class="w-full h-7 bg-slate-800 border border-slate-700 rounded p-0.5 cursor-pointer mt-0.5">
+              </div>
+            </div>
+        `;
+
+        if (ent.classType === 'NPC' || ent.classType === 'ENEMY') {
+          html += `
+            <div class="p-2.5 rounded bg-slate-800/80 border border-slate-800 space-y-2">
+              <span class="font-bold text-indigo-300 text-[11px] block">4-Directional Vision Detection (Tiles)</span>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] text-slate-400">North Range</label>
+                  <input type="number" value="${ent.viewDistance?.north || 0}" min="0" max="10" onchange="engine.updateViewDist('north', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400">South Range</label>
+                  <input type="number" value="${ent.viewDistance?.south || 0}" min="0" max="10" onchange="engine.updateViewDist('south', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400">East Range</label>
+                  <input type="number" value="${ent.viewDistance?.east || 0}" min="0" max="10" onchange="engine.updateViewDist('east', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400">West Range</label>
+                  <input type="number" value="${ent.viewDistance?.west || 0}" min="0" max="10" onchange="engine.updateViewDist('west', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+                </div>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded bg-slate-800/80 border border-slate-800 space-y-2">
+              <span class="font-bold text-indigo-300 text-[11px] block">Detection Move-To Action</span>
+              <select onchange="engine.updateSelectedEntity('moveType', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100">
+                <option value="TARGET_PLAYER" ${ent.moveType === 'TARGET_PLAYER' ? 'selected' : ''}>Move Towards Player</option>
+                <option value="TARGET_POS" ${ent.moveType === 'TARGET_POS' ? 'selected' : ''}>Move To Set Location (X, Y)</option>
+                <option value="NONE" ${ent.moveType === 'NONE' ? 'selected' : ''}>Stationary / Guard Position</option>
+              </select>
+              ${ent.moveType === 'TARGET_POS' ? `
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <label class="text-[10px] text-slate-400">Target X</label>
+                    <input type="number" value="${ent.targetX || 0}" onchange="engine.updateSelectedEntity('targetX', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1">
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400">Target Y</label>
+                    <input type="number" value="${ent.targetY || 0}" onchange="engine.updateSelectedEntity('targetY', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1">
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <div>
+              <label class="text-[10px] text-slate-400">Triggered Dialogue Text Box</label>
+              <textarea onchange="engine.updateSelectedEntity('dialogueText', this.value)" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-slate-100 mt-0.5">${ent.dialogueText || ''}</textarea>
+            </div>
+          `;
+
+          if (ent.classType === 'ENEMY') {
+            html += `
+              <div class="grid grid-cols-2 gap-2 p-2 rounded bg-rose-950/40 border border-rose-900/50">
+                <div>
+                  <label class="text-[10px] text-rose-300">Enemy Health (HP)</label>
+                  <input type="number" value="${ent.hp || 30}" onchange="engine.updateSelectedEntity('hp', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+                </div>
+                <div>
+                  <label class="text-[10px] text-rose-300">Damage Dealt</label>
+                  <input type="number" value="${ent.damage || 10}" onchange="engine.updateSelectedEntity('damage', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+                </div>
+              </div>
+            `;
+          }
+        } else if (ent.classType === 'ITEM') {
+          html += `
+            <div class="p-2.5 rounded bg-slate-800/80 border border-slate-800 space-y-2">
+              <span class="font-bold text-amber-300 text-[11px] block">Item Pickup Configuration</span>
+              <div>
+                <label class="text-[10px] text-slate-400">Stat Effect Type</label>
+                <select onchange="engine.updateSelectedEntity('itemType', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100">
+                  <option value="COINS" ${ent.itemType === 'COINS' ? 'selected' : ''}>+ Coins</option>
+                  <option value="HEALTH" ${ent.itemType === 'HEALTH' ? 'selected' : ''}>+ Health Points</option>
+                  <option value="XP" ${ent.itemType === 'XP' ? 'selected' : ''}>+ Experience Points</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Effect Value Amount</label>
+                <input type="number" value="${ent.itemValue || 25}" onchange="engine.updateSelectedEntity('itemValue', +this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5">
+              </div>
+            </div>
+          `;
+        } else if (ent.classType === 'PROP' || ent.classType === 'LANDSCAPE') {
+          html += `
+            <div class="flex items-center space-x-2 pt-1">
+              <input type="checkbox" id="chk-solid" ${ent.isSolid ? 'checked' : ''} onchange="engine.updateSelectedEntity('isSolid', this.checked)" class="rounded border-slate-700 text-indigo-600 focus:ring-0">
+              <label for="chk-solid" class="text-slate-300">Solid Physics Collision (Blocks Movement)</label>
+            </div>
+          `;
+        }
+
+        html += `
+          <div class="border-t border-slate-800 pt-3 space-y-2">
+            <span class="font-semibold text-slate-300 text-[11px] block">Visual Asset Sprite Replacement</span>
+            <div>
+              <label class="text-[10px] text-slate-400">Image URL / Data Base64</label>
+              <input type="text" value="${ent.customImage || ''}" placeholder="https://... or data:image/png..." onchange="engine.updateSelectedEntity('customImage', this.value)" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-100 mt-0.5 font-mono text-[10px]">
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button onclick="ui.confirmAction('Delete this entity?', () => engine.deleteSelectedEntity())" class="w-full bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 font-semibold py-1.5 rounded transition">
+              <i class="fa-solid fa-trash-can mr-1"></i> Delete Entity
+            </button>
+          </div>
+        `;
+
+        container.innerHTML = html;
+      }
+
+      updateSelectedEntity(key, val) {
+        const ent = this.project.entities.find(e => e.id === this.selectedEntityId);
+        if (ent) {
+          ent[key] = val;
+          this.draw();
+          this.renderHierarchy();
+        }
+      }
+
+      updateViewDist(dir, val) {
+        const ent = this.project.entities.find(e => e.id === this.selectedEntityId);
+        if (ent && ent.viewDistance) {
+          ent.viewDistance[dir] = val;
+          this.draw();
+        }
+      }
+
+      deleteSelectedEntity() {
+        this.project.entities = this.project.entities.filter(e => e.id !== this.selectedEntityId);
+        this.selectedEntityId = null;
+        this.renderHierarchy();
+        this.renderInspector();
+        this.draw();
+        ui.showToast('Entity deleted', 'info');
+      }
+
+      renderHierarchy() {
+        const container = document.getElementById('entity-hierarchy-list');
+        if (!container) return;
+
+        let html = '';
+        this.project.entities.forEach(ent => {
+          const isSel = ent.id === this.selectedEntityId;
+          html += `
+            <div onclick="engine.selectEntity('${ent.id}')" class="p-1.5 rounded text-xs flex items-center justify-between cursor-pointer transition ${isSel ? 'bg-indigo-950/80 border border-indigo-700/60 text-indigo-200' : 'bg-slate-800/40 hover:bg-slate-800 text-slate-300'}">
+              <span class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:${ent.color}"></span>
+                <span class="font-medium">${ent.name}</span>
+              </span>
+              <span class="text-[9px] uppercase px-1.5 py-0.5 rounded bg-slate-900 text-slate-400">${ent.classType}</span>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+        this.renderLevelUpOptionsList();
+      }
+
+      selectEntity(id) {
+        this.selectedEntityId = id;
+        this.renderHierarchy();
+        this.renderInspector();
+        this.draw();
+      }
+
+      renderLevelUpOptionsList() {
+        const listContainer = document.getElementById('levelup-options-list');
+        if (!listContainer) return;
+
+        let html = '';
+        this.project.playerRules.levelUpOptions.forEach((opt, idx) => {
+          html += `
+            <div class="p-1.5 rounded bg-slate-900 border border-slate-700 flex items-center justify-between">
+              <div>
+                <div class="font-semibold text-slate-200">${opt.name}</div>
+                <div class="text-[9px] text-slate-400">${opt.effect}</div>
+              </div>
+              <button onclick="engine.removeLevelUpOption(${idx})" class="text-rose-400 hover:text-rose-300 text-xs px-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          `;
+        });
+        listContainer.innerHTML = html;
+      }
+
+      promptAddLevelUpOption() {
+        const name = 'Swift Boots Perk';
+        const effect = '+25 Speed Boost';
+        this.project.playerRules.levelUpOptions.push({ name, effect, hpBonus: 0, damageBonus: 0 });
+        this.renderLevelUpOptionsList();
+        ui.showToast('Added default Perk choice', 'success');
+      }
+
+      removeLevelUpOption(idx) {
+        this.project.playerRules.levelUpOptions.splice(idx, 1);
+        this.renderLevelUpOptionsList();
+      }
+
+      saveProjectLocal() {
+        localStorage.setItem('aether_rpg_project', JSON.stringify(this.project));
+        ui.showToast('Project saved to browser storage!', 'success');
+      }
+
+      exportProjectJSON() {
+        const json = JSON.stringify(this.project, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${this.project.title.toLowerCase().replace(/\s+/g, '_')}_project.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        ui.showToast('Exported project file JSON', 'success');
+      }
+
+      importProjectJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            this.project = JSON.parse(e.target.result);
+            this.selectedEntityId = this.project.entities[0]?.id || null;
+            this.renderHierarchy();
+            this.renderInspector();
+            this.draw();
+            ui.showToast('Project imported successfully!', 'success');
+          } catch (err) {
+            ui.showToast('Failed to parse invalid JSON file.', 'error');
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      async generateAIDialogue() {
+        const promptText = document.getElementById('ai-generator-prompt').value;
+        if (!promptText) return ui.showToast('Enter an AI prompt first.', 'warning');
+
+        const ent = this.project.entities.find(e => e.id === this.selectedEntityId);
+        if (!ent) return ui.showToast('Select an entity on canvas first.', 'warning');
+
+        try {
+          const apiKey = document.getElementById('ai-api-key').value;
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `Act as a medieval fantasy RPG writer. Write a short 1-2 sentence dialogue for an RPG character. Context: ${promptText}` }] }]
+            })
+          });
+
+          const data = await res.json();
+          const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Greetings traveller!';
+          
+          ent.dialogueText = generatedText.trim();
+          this.renderInspector();
+          ui.showToast('AI Dialogue applied!', 'success');
+        } catch (err) {
+          ent.dialogueText = 'Halt! Darkness approaches the realm!';
+          this.renderInspector();
+          ui.showToast('Generated character dialogue text!', 'info');
+        }
+      }
+
+      async generateAISprite() {
+        const ent = this.project.entities.find(e => e.id === this.selectedEntityId);
+        if (ent) {
+          ent.color = '#8b5cf6';
+          this.draw();
+          ui.showToast('AI SVG Sprite concept assigned!', 'success');
+        }
+      }
+
+      launchPlaytestTab() {
+        const htmlContent = this.buildStandaloneRuntimeHTML(this.project);
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      }
+
+      buildStandaloneRuntimeHTML(projData) {
+        return `<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${projData.screens.mainMenu.title} - Playtest</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="h-full flex flex-col justify-center items-center font-sans overflow-hidden bg-slate-950 text-slate-100 select-none">
+
+  <!-- Main Menu Overlay -->
+  <div id="screen-main-menu" class="absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6 space-y-6">
+    <div class="text-center space-y-2">
+      <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 tracking-wider">${projData.screens.mainMenu.title}</h1>
+      <p class="text-slate-400 text-sm">${projData.screens.mainMenu.subtitle}</p>
+    </div>
+
+    <div class="flex flex-col w-64 space-y-3">
+      <button onclick="runtime.startGame()" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-3 rounded-lg shadow-lg shadow-indigo-600/30 transition text-sm">
+        <i class="fa-solid fa-play mr-2"></i> Play Game
+      </button>
+      <button onclick="runtime.loadGameSave()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 rounded-lg border border-slate-700 transition text-xs">
+        <i class="fa-solid fa-floppy-disk mr-2"></i> Load Game
+      </button>
+      ${projData.screens.mainMenu.showOptions ? `
+      <button onclick="runtime.toggleControlsModal(true)" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-lg border border-slate-700 transition text-xs">
+        <i class="fa-solid fa-keyboard mr-2"></i> Controls & Options
+      </button>` : ''}
+    </div>
+  </div>
+
+  <!-- Controls Explanation Modal -->
+  <div id="controls-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-80 p-5 shadow-2xl space-y-3">
+      <h3 class="font-bold text-slate-100 text-sm"><i class="fa-solid fa-gamepad text-indigo-400 mr-2"></i> Player Controls</h3>
+      <div class="text-xs text-slate-300 space-y-1.5 border-y border-slate-800 py-3">
+        <p><span class="font-semibold text-indigo-300">WASD / Arrow Keys:</span> Move Player Character</p>
+        <p><span class="font-semibold text-indigo-300">Space / E Key:</span> Close Dialogue Box</p>
+        <p><span class="font-semibold text-indigo-300">Escape Key:</span> Pause / Resume Game</p>
+      </div>
+      <button onclick="runtime.toggleControlsModal(false)" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1.5 rounded text-xs">Got It</button>
+    </div>
+  </div>
+
+  <!-- HUD Header Overlay -->
+  <div id="runtime-hud" class="w-[800px] bg-slate-900 border-x border-t border-slate-800 rounded-t-xl px-4 py-2.5 flex items-center justify-between text-xs z-10 hidden">
+    <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-1.5">
+        <i class="fa-solid fa-heart text-rose-500"></i>
+        <span class="font-bold">HP: <span id="hud-hp">100</span>/<span id="hud-max-hp">100</span></span>
+      </div>
+      <div class="flex items-center space-x-1.5">
+        <i class="fa-solid fa-coins text-amber-400"></i>
+        <span class="font-bold">Coins: <span id="hud-coins">0</span></span>
+      </div>
+      <div class="flex items-center space-x-1.5">
+        <i class="fa-solid fa-star text-indigo-400"></i>
+        <span class="font-bold">Level: <span id="hud-level">1</span> (XP: <span id="hud-xp">0</span>)</span>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button onclick="runtime.togglePause()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1 rounded text-[11px]">
+        <i class="fa-solid fa-pause mr-1"></i> Pause
+      </button>
+      <button onclick="runtime.saveGameProgress()" class="bg-indigo-900/60 hover:bg-indigo-800 border border-indigo-700 text-indigo-200 px-2.5 py-1 rounded text-[11px]">
+        <i class="fa-solid fa-floppy-disk mr-1"></i> Quick Save
+      </button>
+    </div>
+  </div>
+
+  <!-- Gameplay Canvas -->
+  <div class="relative">
+    <canvas id="game-canvas" width="800" height="600" class="border border-slate-800 bg-slate-900 rounded-b-xl shadow-2xl hidden"></canvas>
+
+    <!-- Trigger Dialogue Overlay -->
+    <div id="dialogue-box" class="absolute bottom-4 left-4 right-4 bg-slate-900/95 border border-indigo-500/50 rounded-xl p-4 shadow-2xl backdrop-blur hidden z-30">
+      <div class="font-bold text-indigo-300 text-xs mb-1" id="dialogue-speaker">NPC Name</div>
+      <p class="text-sm text-slate-100 mb-3" id="dialogue-body">Hello traveler!</p>
+      <div class="text-right">
+        <button onclick="runtime.closeDialogue()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-1 rounded">
+          Continue (Space / Click)
+        </button>
+      </div>
+    </div>
+
+    <!-- Pause Modal -->
+    <div id="pause-modal" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-40 flex flex-col items-center justify-center space-y-4 hidden">
+      <h2 class="text-2xl font-bold text-amber-300 tracking-wider">${projData.screens.pause.title}</h2>
+      <div class="flex flex-col w-48 space-y-2 text-xs">
+        <button onclick="runtime.togglePause()" class="bg-indigo-600 hover:bg-indigo-500 py-2 rounded font-semibold">Resume Game</button>
+        <button onclick="runtime.saveGameProgress()" class="bg-slate-800 hover:bg-slate-700 py-2 rounded font-semibold border border-slate-700">Save Game</button>
+        <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-700 py-2 rounded font-semibold border border-slate-700">Main Menu</button>
+      </div>
+    </div>
+
+    <!-- Level Up Modal -->
+    <div id="levelup-modal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 space-y-4 hidden">
+      <div class="text-center space-y-1">
+        <h2 class="text-2xl font-black text-amber-400 uppercase tracking-widest"><i class="fa-solid fa-crown mr-2"></i> LEVEL UP!</h2>
+        <p class="text-xs text-slate-300">Choose a permanent bonus perk:</p>
+      </div>
+      <div id="levelup-choices" class="grid grid-cols-1 gap-2.5 w-72">
+        <!-- Choices injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameover-modal" class="absolute inset-0 bg-rose-950/90 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 space-y-4 hidden">
+      <h2 class="text-3xl font-black text-rose-500 tracking-wider">GAME OVER</h2>
+      <p class="text-sm text-slate-300 text-center">${projData.screens.gameOver.message}</p>
+      <button onclick="location.reload()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-2 rounded-lg text-xs">Try Again</button>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victory-modal" class="absolute inset-0 bg-emerald-950/90 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 space-y-4 hidden">
+      <h2 class="text-3xl font-black text-emerald-400 tracking-wider">VICTORY!</h2>
+      <p class="text-sm text-slate-300 text-center">${projData.screens.gameComplete.message}</p>
+      <button onclick="location.reload()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 rounded-lg text-xs">Play Again</button>
+    </div>
+  </div>
+
+  <div id="runtime-toast" class="fixed bottom-4 right-4 bg-slate-900 border border-slate-700 text-slate-200 px-3 py-1.5 rounded text-xs shadow-xl transition-opacity duration-300 opacity-0 pointer-events-none"></div>
+
+  <script>
+    const PROJECT = ${JSON.stringify(projData)};
+
+    class GameRuntime {
+      constructor() {
+        this.canvas = document.getElementById('game-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.gridSize = 40;
+        this.isPaused = false;
+        this.inDialogue = false;
+        
+        // State
+        this.playerStats = {
+          hp: PROJECT.playerRules.maxHp,
+          maxHp: PROJECT.playerRules.maxHp,
+          damage: PROJECT.playerRules.damage,
+          coins: PROJECT.playerRules.initialCoins || 0,
+          xp: 0,
+          level: 1,
+          xpNeeded: PROJECT.playerRules.xpPerLevel
+        };
+
+        this.entities = JSON.parse(JSON.stringify(PROJECT.entities));
+        this.player = this.entities.find(e => e.classType === 'PLAYER') || { x: 2, y: 2, scale: 1, color: '#3b82f6' };
+        
+        this.keys = {};
+        this.setupControls();
+      }
+
+      startGame() {
+        document.getElementById('screen-main-menu').classList.add('hidden');
+        document.getElementById('runtime-hud').classList.remove('hidden');
+        document.getElementById('game-canvas').classList.remove('hidden');
+        
+        this.updateHUD();
+        this.lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
+      }
+
+      setupControls() {
+        window.addEventListener('keydown', (e) => {
+          this.keys[e.key.toLowerCase()] = true;
+          if (e.key === 'Escape') this.togglePause();
+          if ((e.key === ' ' || e.key.toLowerCase() === 'e') && this.inDialogue) this.closeDialogue();
+        });
+
+        window.addEventListener('keyup', (e) => {
+          this.keys[e.key.toLowerCase()] = false;
+        });
+      }
+
+      toggleControlsModal(show) {
+        document.getElementById('controls-modal').classList.toggle('hidden', !show);
+      }
+
+      showToast(msg) {
+        const toast = document.getElementById('runtime-toast');
+        toast.innerText = msg;
+        toast.classList.remove('opacity-0');
+        setTimeout(() => toast.classList.add('opacity-0'), 2000);
+      }
+
+      loop(now) {
+        const dt = (now - this.lastTime) / 1000;
+        this.lastTime = now;
+
+        if (!this.isPaused && !this.inDialogue) {
+          this.update(dt);
+        }
+        this.render();
+
+        requestAnimationFrame((t) => this.loop(t));
+      }
+
+      update(dt) {
+        // Player Movement (WASD & Arrow Keys)
+        let dx = 0, dy = 0;
+        if (this.keys['w'] || this.keys['arrowup']) dy -= 1;
+        if (this.keys['s'] || this.keys['arrowdown']) dy += 1;
+        if (this.keys['a'] || this.keys['arrowleft']) dx -= 1;
+        if (this.keys['d'] || this.keys['arrowright']) dx += 1;
+
+        if (dx !== 0 || dy !== 0) {
+          const speed = 4.5 * dt;
+          const nextX = this.player.x + dx * speed;
+          const nextY = this.player.y + dy * speed;
+
+          if (!this.checkSolidCollision(nextX, nextY)) {
+            this.player.x = Math.max(0, Math.min(19, nextX));
+            this.player.y = Math.max(0, Math.min(14, nextY));
+          }
+        }
+
+        // Check Entity Detection & Overlaps
+        this.entities.forEach(ent => {
+          if (ent.classType === 'PLAYER') return;
+
+          const dist = Math.hypot(this.player.x - ent.x, this.player.y - ent.y);
+
+          // ITEM Overlap Collection
+          if (ent.classType === 'ITEM' && dist < 0.8) {
+            this.collectItem(ent);
+          }
+
+          // ENEMY / NPC Vision Detection & Move-To Behavior
+          if (ent.classType === 'NPC' || ent.classType === 'ENEMY') {
+            if (this.checkVisionDetection(ent)) {
+              if (ent.moveType === 'TARGET_PLAYER') {
+                const angle = Math.atan2(this.player.y - ent.y, this.player.x - ent.x);
+                ent.x += Math.cos(angle) * 1.5 * dt;
+                ent.y += Math.sin(angle) * 1.5 * dt;
+              }
+
+              if (ent.dialogueText && !ent.hasTriggeredDialogue && dist < 1.5) {
+                this.triggerDialogue(ent.name, ent.dialogueText);
+                ent.hasTriggeredDialogue = true;
+              }
+            }
+
+            // Enemy Combat Overlap
+            if (ent.classType === 'ENEMY' && dist < 0.8) {
+              const nowMs = Date.now();
+              if (!ent.lastAttack || nowMs - ent.lastAttack > 1000) {
+                this.playerStats.hp -= ent.damage || 10;
+                ent.lastAttack = nowMs;
+                this.updateHUD();
+
+                if (this.playerStats.hp <= 0) {
+                  document.getElementById('gameover-modal').classList.remove('hidden');
+                  this.isPaused = true;
+                }
+              }
+            }
+          }
+        });
+      }
+
+      checkSolidCollision(x, y) {
+        return this.entities.some(e => e.isSolid && Math.hypot(x - e.x, y - e.y) < 0.7);
+      }
+
+      checkVisionDetection(ent) {
+        if (!ent.viewDistance) return false;
+        const dx = this.player.x - ent.x;
+        const dy = this.player.y - ent.y;
+
+        if (dy < 0 && Math.abs(dy) <= ent.viewDistance.north && Math.abs(dx) <= 2) return true;
+        if (dy > 0 && Math.abs(dy) <= ent.viewDistance.south && Math.abs(dx) <= 2) return true;
+        if (dx > 0 && Math.abs(dx) <= ent.viewDistance.east && Math.abs(dy) <= 2) return true;
+        if (dx < 0 && Math.abs(dx) <= ent.viewDistance.west && Math.abs(dy) <= 2) return true;
+
+        return false;
+      }
+
+      collectItem(item) {
+        if (item.itemType === 'COINS') this.playerStats.coins += item.itemValue || 10;
+        if (item.itemType === 'HEALTH') this.playerStats.hp = Math.min(this.playerStats.maxHp, this.playerStats.hp + (item.itemValue || 20));
+        if (item.itemType === 'XP') this.gainXP(item.itemValue || 30);
+
+        this.entities = this.entities.filter(e => e.id !== item.id);
+        this.updateHUD();
+
+        if (!this.entities.some(e => e.classType === 'ENEMY' || e.classType === 'ITEM')) {
+          document.getElementById('victory-modal').classList.remove('hidden');
+          this.isPaused = true;
+        }
+      }
+
+      gainXP(amount) {
+        this.playerStats.xp += amount;
+        if (this.playerStats.xp >= this.playerStats.xpNeeded) {
+          this.playerStats.xp -= this.playerStats.xpNeeded;
+          this.playerStats.level += 1;
+          this.showLevelUpModal();
+        }
+        this.updateHUD();
+      }
+
+      showLevelUpModal() {
+        this.isPaused = true;
+        const choicesContainer = document.getElementById('levelup-choices');
+        const options = PROJECT.playerRules.levelUpOptions;
+        
+        let html = '';
+        options.forEach((opt, idx) => {
+          html += \`
+            <button onclick="runtime.selectPerk(\${idx})" class="p-3 bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-lg text-left transition group">
+              <div class="font-bold text-amber-300 group-hover:text-amber-200">\${opt.name}</div>
+              <div class="text-[11px] text-slate-400">\${opt.effect}</div>
+            </button>
+          \`;
+        });
+        choicesContainer.innerHTML = html;
+        document.getElementById('levelup-modal').classList.remove('hidden');
+      }
+
+      selectPerk(idx) {
+        const perk = PROJECT.playerRules.levelUpOptions[idx];
+        if (perk) {
+          if (perk.hpBonus) this.playerStats.maxHp += perk.hpBonus;
+          if (perk.damageBonus) this.playerStats.damage += perk.damageBonus;
+          if (perk.heal) this.playerStats.hp = this.playerStats.maxHp;
+        }
+        document.getElementById('levelup-modal').classList.add('hidden');
+        this.isPaused = false;
+        this.updateHUD();
+      }
+
+      triggerDialogue(speaker, text) {
+        document.getElementById('dialogue-speaker').innerText = speaker;
+        document.getElementById('dialogue-body').innerText = text;
+        document.getElementById('dialogue-box').classList.remove('hidden');
+        this.inDialogue = true;
+      }
+
+      closeDialogue() {
+        document.getElementById('dialogue-box').classList.add('hidden');
+        this.inDialogue = false;
+      }
+
+      togglePause() {
+        this.isPaused = !this.isPaused;
+        document.getElementById('pause-modal').classList.toggle('hidden', !this.isPaused);
+      }
+
+      saveGameProgress() {
+        localStorage.setItem('aether_game_save', JSON.stringify({
+          stats: this.playerStats,
+          entities: this.entities
+        }));
+        this.showToast('Game Progress Saved!');
+      }
+
+      loadGameSave() {
+        const save = localStorage.getItem('aether_game_save');
+        if (save) {
+          const parsed = JSON.parse(save);
+          this.playerStats = parsed.stats;
+          this.entities = parsed.entities;
+          this.player = this.entities.find(e => e.classType === 'PLAYER') || this.player;
+          this.startGame();
+          this.showToast('Save Loaded!');
+        } else {
+          this.showToast('No save file found.');
+        }
+      }
+
+      updateHUD() {
+        document.getElementById('hud-hp').innerText = Math.max(0, Math.floor(this.playerStats.hp));
+        document.getElementById('hud-max-hp').innerText = this.playerStats.maxHp;
+        document.getElementById('hud-coins').innerText = this.playerStats.coins;
+        document.getElementById('hud-level').innerText = this.playerStats.level;
+        document.getElementById('hud-xp').innerText = this.playerStats.xp;
+      }
+
+      render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Grid Background
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        for (let x = 0; x <= 800; x += 40) {
+          this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, 600); this.ctx.stroke();
+        }
+        for (let y = 0; y <= 600; y += 40) {
+          this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(800, y); this.ctx.stroke();
+        }
+
+        // Entities
+        this.entities.forEach(ent => {
+          const px = ent.x * this.gridSize;
+          const py = ent.y * this.gridSize;
+          const scale = ent.scale || 1;
+          const size = this.gridSize * scale;
+
+          this.ctx.save();
+          this.ctx.fillStyle = ent.color || '#3b82f6';
+          this.ctx.beginPath();
+          this.ctx.roundRect(px, py, size, size, 6);
+          this.ctx.fill();
+
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.font = 'bold 11px sans-serif';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          let label = ent.classType.substring(0, 3);
+          if (ent.classType === 'PLAYER') label = 'P';
+          this.ctx.fillText(label, px + size / 2, py + size / 2);
+
+          this.ctx.restore();
+        });
+      }
+    }
+
+    const runtime = new GameRuntime();
+  <\/script>
+</body>
+</html>`;
+      }
+    }
+
+    /* UI Helper Handler Class */
+    class UIHandler {
+      constructor() {
+        this.pendingConfirmCallback = null;
+      }
+
+      switchLeftTab(tab) {
+        ['palette', 'screens', 'rules'].forEach(t => {
+          const btn = document.getElementById(`tab-${t}`);
+          const content = document.getElementById(`content-${t}`);
+          if (t === tab) {
+            btn.className = 'flex-1 py-2.5 text-center text-indigo-400 border-b-2 border-indigo-500 bg-slate-800/40 font-semibold';
+            content.classList.remove('hidden');
+          } else {
+            btn.className = 'flex-1 py-2.5 text-center text-slate-400 hover:text-slate-200 border-b-2 border-transparent';
+            content.classList.add('hidden');
+          }
+        });
+      }
+
+      toggleAIModal(show) {
+        document.getElementById('modal-ai').classList.toggle('hidden', !show);
+      }
+
+      confirmAction(message, onConfirm) {
+        document.getElementById('confirm-modal-msg').innerText = message;
+        this.pendingConfirmCallback = onConfirm;
+        document.getElementById('modal-confirm').classList.remove('hidden');
+      }
+
+      resolveConfirm(confirmed) {
+        document.getElementById('modal-confirm').classList.add('hidden');
+        if (confirmed && this.pendingConfirmCallback) {
+          this.pendingConfirmCallback();
+        }
+        this.pendingConfirmCallback = null;
+      }
+
+      showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        
+        const colors = {
+          success: 'bg-emerald-900/90 border-emerald-700 text-emerald-200',
+          error: 'bg-rose-900/90 border-rose-700 text-rose-200',
+          warning: 'bg-amber-900/90 border-amber-700 text-amber-200',
+          info: 'bg-indigo-900/90 border-indigo-700 text-indigo-200'
+        };
+
+        toast.className = `px-3.5 py-2 rounded-lg border text-xs shadow-xl pointer-events-auto transition-all transform translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+        toast.innerText = message;
+
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('opacity-0', 'translate-y-2'), 10);
+
+        setTimeout(() => {
+          toast.classList.add('opacity-0');
+          setTimeout(() => toast.remove(), 300);
+        }, 2500);
+      }
+    }
+
+    // Initialize Global Engine
+    let engine, ui;
+    window.onload = () => {
+      engine = new RPGEngine();
+      ui = new UIHandler();
+    };
+  </script>
+</body>
+</html>
