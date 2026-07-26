@@ -130,7 +130,7 @@
         <div class="bg-slate-900/60 border border-slate-800 p-6 rounded-2xl space-y-3">
           <div class="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center text-2xl font-bold">🏆</div>
           <h3 class="text-lg font-bold text-white">Rule-Based Ending Triggers</h3>
-          <p class="text-slate-400 text-sm leading-relaxed">Set game-ending triggers: collect $N$ coins, reach target level, defeat specific boss enemy, or reach player $HP \le 0$.</p>
+          <p class="text-slate-400 text-sm leading-relaxed">Set game-ending triggers: collect target coin count, reach target level, or defeat all enemy entities.</p>
         </div>
 
         <div class="bg-slate-900/60 border border-slate-800 p-6 rounded-2xl space-y-3">
@@ -232,7 +232,7 @@
             </div>
             <div>
               <label class="block text-slate-400 mb-1">Target Value / Threshold</label>
-              <input id="win-condition-val" type="number" value="50" onchange="updateEndingRules()" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200" />
+              <input id="win-condition-val" type="number" value="30" onchange="updateEndingRules()" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200" />
             </div>
           </div>
         </div>
@@ -365,21 +365,121 @@
 
   <!-- ==================== PAGE 3: MANUAL & TUTORIAL ==================== -->
   <main id="page-manual" class="hidden flex-1 max-w-5xl mx-auto px-4 py-12 space-y-12">
+    <!-- Manual Header -->
     <div class="border-b border-slate-800 pb-8 space-y-3">
       <h1 class="text-3xl font-extrabold text-white">AetherEngine User Manual & Tutorial</h1>
-      <p class="text-slate-400 text-sm">Learn how to create custom XP formulas, pop-up modals, win/loss triggers, and ship your game offline.</p>
+      <p class="text-slate-400 text-sm">
+        Learn how to master entity vision cones, RPG leveling formulas, custom pop-up modals, ending triggers, and ship your first offline-playable top-down game.
+      </p>
     </div>
 
+    <!-- Section 1: Core Concepts & Entity Classes -->
     <section class="space-y-4">
-      <h2 class="text-xl font-bold text-indigo-400 flex items-center gap-2"><span>1.</span> Custom Pop-Up Modals & Ending Triggers</h2>
-      <div class="grid sm:grid-cols-2 gap-4 text-sm text-slate-300">
+      <h2 class="text-xl font-bold text-indigo-400 flex items-center gap-2">
+        <span>1.</span> Core Concepts & Entity Classes
+      </h2>
+      <div class="grid sm:grid-cols-3 gap-4 text-sm text-slate-300">
         <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
-          <span class="font-bold text-amber-400">XP & Leveling System:</span>
-          <p class="text-xs text-slate-400">Set base XP thresholds (e.g. 100 XP) and multiplier growth curves. Level-up events can automatically spawn perk choices or custom modals.</p>
+          <span class="font-bold text-blue-400">PLAYER:</span>
+          <p class="text-xs text-slate-400">The main character controlled with WASD or Arrow Keys. Tracks HP, Coins, and XP leveling progression.</p>
         </div>
         <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
-          <span class="font-bold text-indigo-400">Custom Pop-Up Modals:</span>
-          <p class="text-xs text-slate-400">Design interactive pop-ups with custom button actions like healing, boosting attack damage, or triggering victory states.</p>
+          <span class="font-bold text-emerald-400">NPC:</span>
+          <p class="text-xs text-slate-400">Non-player characters with adjustable 4-directional vision cones. Displays custom dialogue modals when approached.</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
+          <span class="font-bold text-rose-400">ENEMY:</span>
+          <p class="text-xs text-slate-400">Hostile entities. Can chase the player on vision detection and deal contact damage upon collision overlap.</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
+          <span class="font-bold text-amber-400">ITEM:</span>
+          <p class="text-xs text-slate-400">Pickup objects that immediately award Coins, Health restores, or Experience points when touched.</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
+          <span class="font-bold text-purple-400">PROP:</span>
+          <p class="text-xs text-slate-400">Decorative map elements such as trees, signs, chests, or furniture with optional solid collision.</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
+          <span class="font-bold text-slate-400">LANDSCAPE:</span>
+          <p class="text-xs text-slate-400">Solid barriers, rocks, wall tiles, or boundaries that block movement for players and enemies.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Advanced Systems (XP, Modals & Triggers) -->
+    <section class="space-y-4">
+      <h2 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+        <span>2.</span> XP Formulas, Custom Modals & Ending Triggers
+      </h2>
+      <div class="grid sm:grid-cols-3 gap-4 text-sm text-slate-300">
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
+          <span class="font-bold text-amber-400">⭐ Leveling & XP Rules:</span>
+          <p class="text-xs text-slate-400">Set base Level 1 XP requirements and multiplier curves (e.g. 1.5x per level). Automatically pause gameplay on level up to present customized perk selections.</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
+          <span class="font-bold text-indigo-400">🪟 Custom Pop-Up Builder:</span>
+          <p class="text-xs text-slate-400">Design custom on-screen pop-up windows in the left sidebar. Add interactive buttons carrying action payloads like boosting player Max HP (+20) or Attack (+5).</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
+          <span class="font-bold text-emerald-400">🏆 Game-Ending Triggers:</span>
+          <p class="text-xs text-slate-400">Choose rule-based win conditions (Collect Coins, Reach Player Level, Defeat All Enemies) and set target numeric thresholds that automatically display the Victory screen.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Step-by-Step Tutorial -->
+    <section class="space-y-6">
+      <h2 class="text-xl font-bold text-indigo-400 flex items-center gap-2">
+        <span>3.</span> Step-by-Step Tutorial: Building Your First Mini-RPG
+      </h2>
+
+      <div class="space-y-6">
+        <!-- Step 1 -->
+        <div class="bg-slate-900/60 border border-slate-800 p-6 rounded-xl space-y-2">
+          <h3 class="font-bold text-white text-base">Step 1: Map Layout & Boundary Walls</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Open the <button onclick="switchPage('engine')" class="text-indigo-400 underline font-semibold">Engine Studio</button>. Click <strong>PLAYER</strong> in the left palette and click near the left side of the grid canvas to place your hero. Next, select <strong>LANDSCAPE</strong> and build boundary walls along the edge of the grid. Ensure <strong>Solid Barrier</strong> is checked in the Inspector for each wall block.
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="bg-slate-900/60 border border-slate-800 p-6 rounded-xl space-y-2">
+          <h3 class="font-bold text-white text-base">Step 2: Placing NPCs & Configuring Vision Cones</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Select <strong>NPC</strong> from the palette and place an guide character near your player. Click the NPC to open the Inspector panel. Set North, South, East, and West vision distances to <code class="bg-slate-950 px-1 py-0.5 rounded text-indigo-300">80px</code>. In the dialogue text box, type: <em>"Welcome adventurer! Collect 30 coins to complete your quest!"</em>
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="bg-slate-900/60 border border-slate-800 p-6 rounded-xl space-y-2">
+          <h3 class="font-bold text-white text-base">Step 3: Configuring XP Leveling & Items</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            In the left sidebar under <strong>XP Leveling Rules</strong>, set Base XP to <code class="bg-slate-950 px-1 py-0.5 rounded text-amber-300">100</code> and Multiplier to <code class="bg-slate-950 px-1 py-0.5 rounded text-amber-300">1.5</code>. Select <strong>ITEM</strong> in the palette and place several coin bags on the grid. Set their pickup rewards in the Inspector panel to <code class="bg-slate-950 px-1 py-0.5 rounded text-amber-300">+30 Coins</code> and <code class="bg-slate-950 px-1 py-0.5 rounded text-amber-300">+100 XP</code>.
+          </p>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="bg-slate-900/60 border border-slate-800 p-6 rounded-xl space-y-2">
+          <h3 class="font-bold text-white text-base">Step 4: Setting Up Custom Pop-Up Modals</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Look at the <strong>Custom Pop-Up Modals</strong> section in the left sidebar. Notice the pre-built level up modal titled <em>"Level Up Perk Selection!"</em>. You can click <strong>+ New</strong> to create additional custom pop-ups with custom text and interactive stat boost buttons (+20 HP or +5 Attack).
+          </p>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="bg-slate-900/60 border border-slate-800 p-6 rounded-xl space-y-2">
+          <h3 class="font-bold text-white text-base">Step 5: Enemy Combat & Victory Triggers</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Place an <strong>ENEMY</strong> guard near the center room. Set its behavior to <strong>Chase Player</strong>, set its Vision Range to <code class="bg-slate-950 px-1 py-0.5 rounded text-rose-300">120px</code>, and give it 15 overlap damage. Then, under <strong>Victory & Ending Triggers</strong> in the left sidebar, choose <strong>Collect Target Coin Count</strong> and set the threshold to <code class="bg-slate-950 px-1 py-0.5 rounded text-emerald-300">30</code>.
+          </p>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="bg-slate-900/60 border border-slate-800 p-6 rounded-xl space-y-2">
+          <h3 class="font-bold text-white text-base">Step 6: Testing & Offline Playtesting</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Click <strong>▶ Launch Game in New Tab</strong> in the studio toolbar. A new browser tab will open with your compiled game running inside a standalone Blob URL sandbox. Use WASD or Arrow Keys to walk around, collect items, level up, and complete the quest!
+          </p>
         </div>
       </div>
     </section>
